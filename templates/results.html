@@ -1,162 +1,393 @@
-{% extends "base.html" %}
-
-{% block title %}Analysis Results - Cheating Detection{% endblock %}
-
-{% block content %}
-<div class="results-section">
-    <h2>Analysis Results</h2>
-    
-    <div class="loading-results" id="loadingResults">
-        <div class="spinner"></div>
-        <p>Loading results...</p>
-    </div>
-
-    <div class="results-content" id="resultsContent" style="display: none;">
-        <div class="status-card" id="statusCard">
-            <div class="status-icon" id="statusIcon"></div>
-            <h3 id="statusTitle"></h3>
-            <p id="statusMessage"></p>
-        </div>
-
-        <div class="results-grid">
-            <div class="result-card">
-                <h4>Video Information</h4>
-                <div class="info-item">
-                    <span class="label">Duration:</span>
-                    <span class="value" id="duration"></span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Resolution:</span>
-                    <span class="value" id="resolution"></span>
-                </div>
-                <div class="info-item">
-                    <span class="label">FPS:</span>
-                    <span class="value" id="fps"></span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Total Frames:</span>
-                    <span class="value" id="totalFrames"></span>
-                </div>
-            </div>
-
-            <div class="result-card">
-                <h4>Detection Summary</h4>
-                <div class="info-item">
-                    <span class="label">Frames Analyzed:</span>
-                    <span class="value" id="framesAnalyzed"></span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Suspicious Frames:</span>
-                    <span class="value" id="suspiciousFrames"></span>
-                </div>
-                <div class="info-item">
-                    <span class="label">Average Confidence:</span>
-                    <span class="value" id="avgConfidence"></span>
-                </div>
-            </div>
-        </div>
-
-        <div class="incidents-section" id="incidentsSection" style="display: none;">
-            <h4>Detected Incidents</h4>
-            <div class="incidents-list" id="incidentsList"></div>
-        </div>
-
-        <div class="actions">
-            <a href="{{ url_for('index') }}" class="btn btn-primary">Analyze Another Video</a>
-            <button class="btn btn-secondary" id="downloadReport">Download Report</button>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    const filename = "{{ filename }}";
-
-    function formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    function loadResults() {
-        fetch(`/process/${filename}`, { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    displayResults(data.results);
-                } else {
-                    alert('Failed to load results: ' + data.error);
-                }
-            })
-            .catch(error => {
-                alert('Error loading results: ' + error);
-            });
-    }
-
-    function displayResults(results) {
-        const videoInfo = results.video_info;
-        const detection = results.detection_results;
-
-        // Hide loading, show results
-        document.getElementById('loadingResults').style.display = 'none';
-        document.getElementById('resultsContent').style.display = 'block';
-
-        // Status card
-        const statusCard = document.getElementById('statusCard');
-        const statusIcon = document.getElementById('statusIcon');
-        const statusTitle = document.getElementById('statusTitle');
-        const statusMessage = document.getElementById('statusMessage');
-
-        if (detection.overall_status === 'Cheating Detected') {
-            statusCard.classList.add('alert');
-            statusIcon.textContent = '⚠️';
-            statusTitle.textContent = 'Cheating Detected';
-            statusMessage.textContent = `Suspicious activity detected in ${detection.cheating_detected_frames.length} frames.`;
-        } else {
-            statusCard.classList.add('success');
-            statusIcon.textContent = '✓';
-            statusTitle.textContent = 'No Cheating Detected';
-            statusMessage.textContent = 'The video analysis did not detect any suspicious activity.';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        // Video info
-        document.getElementById('duration').textContent = formatTime(videoInfo.duration);
-        document.getElementById('resolution').textContent = videoInfo.resolution;
-        document.getElementById('fps').textContent = videoInfo.fps.toFixed(2);
-        document.getElementById('totalFrames').textContent = videoInfo.total_frames;
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-        // Detection summary
-        document.getElementById('framesAnalyzed').textContent = detection.total_frames;
-        document.getElementById('suspiciousFrames').textContent = detection.cheating_detected_frames.length;
-        document.getElementById('avgConfidence').textContent = 
-            detection.avg_confidence ? (detection.avg_confidence * 100).toFixed(1) + '%' : 'N/A';
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
 
-        // Incidents
-        if (detection.cheating_detected_frames.length > 0) {
-            const incidentsSection = document.getElementById('incidentsSection');
-            const incidentsList = document.getElementById('incidentsList');
-            incidentsSection.style.display = 'block';
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-            detection.timestamps.forEach((timestamp, index) => {
-                const incident = document.createElement('div');
-                incident.className = 'incident-item';
-                incident.innerHTML = `
-                    <div class="incident-info">
-                        <span class="incident-time">${formatTime(timestamp)}</span>
-                        <span class="incident-confidence">Confidence: ${(detection.confidence_scores[index] * 100).toFixed(1)}%</span>
+        .status-card {
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .status-card.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status-card.alert {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .result-card {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #667eea;
+        }
+
+        .result-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .value {
+            color: #333;
+        }
+
+        .incidents-section {
+            margin-top: 30px;
+        }
+
+        .incidents-section h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .incident-item {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .incident-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .incident-time {
+            font-weight: bold;
+            color: #856404;
+        }
+
+        .incident-confidence {
+            background: #ffc107;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: #856404;
+            font-size: 12px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .loading-results {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .video-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .video-section h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Cheating Detection Results</h1>
+
+        <div class="loading-results" id="loadingResults">
+            <div class="spinner"></div>
+            <p>Loading results...</p>
+        </div>
+
+        <div class="results-content" id="resultsContent" style="display: none;">
+            <div class="status-card" id="statusCard">
+                <div class="status-icon" id="statusIcon"></div>
+                <h3 id="statusTitle"></h3>
+                <p id="statusMessage"></p>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-card">
+                    <h4>Video Information</h4>
+                    <div class="info-item">
+                        <span class="label">Total Frames:</span>
+                        <span class="value" id="totalFrames"></span>
                     </div>
-                `;
-                incidentsList.appendChild(incident);
-            });
+                    <div class="info-item">
+                        <span class="label">Frames Analyzed:</span>
+                        <span class="value" id="framesAnalyzed"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Processing Time:</span>
+                        <span class="value" id="processingTime"></span>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h4>Detection Summary</h4>
+                    <div class="info-item">
+                        <span class="label">Total Persons:</span>
+                        <span class="value" id="totalPersons"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Cheating Persons:</span>
+                        <span class="value" id="cheatingPersons"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="incidents-section" id="incidentsSection" style="display: none;">
+                <h4>Detected Incidents</h4>
+                <div class="incidents-list" id="incidentsList"></div>
+            </div>
+
+            <div class="video-section">
+                <h4>Processed Video</h4>
+                <video controls id="outputVideo">
+                    <source src="{{ url_for('static', filename=output_video) }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <div class="actions">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">Analyze Another Video</a>
+                <button class="btn btn-secondary" id="downloadReport">Download Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get data from Flask (Jinja2)
+        const result_summary = {{ summary | tojson | safe }};
+        const filename = "{{ filename }}";
+
+        console.log('Result summary:', result_summary);
+        console.log('Filename:', filename);
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
-    }
 
-    document.getElementById('downloadReport').addEventListener('click', () => {
-        alert('Report download functionality coming soon!');
-    });
+        function loadResults() {
+            // Hide loader, show content
+            document.getElementById('loadingResults').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
 
-    // Load results on page load
-    loadResults();
-</script>
-{% endblock %}
+            // Check if data exists
+            if (!result_summary) {
+                alert('Error: No summary data received from server');
+                return;
+            }
+
+            // If backend error
+            if (result_summary.error) {
+                alert(result_summary.error);
+                // Still show the UI with default values
+            }
+
+            // Status card
+            const statusCard = document.getElementById('statusCard');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusMessage = document.getElementById('statusMessage');
+
+            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+                statusCard.classList.add('alert');
+                statusIcon.textContent = '⚠️';
+                statusTitle.textContent = 'Cheating Detected';
+                statusMessage.textContent = 
+                    `Detected ${result_summary.cheating_persons.length} suspicious individual(s).`;
+            } else {
+                statusCard.classList.add('success');
+                statusIcon.textContent = '✓';
+                statusTitle.textContent = 'No Cheating Detected';
+                statusMessage.textContent = 'No suspicious behavior detected in the video.';
+            }
+
+            // Fill info fields
+            document.getElementById('totalFrames').textContent = result_summary.total_frames || 'N/A';
+            document.getElementById('framesAnalyzed').textContent = result_summary.total_frames || 'N/A';
+            document.getElementById('processingTime').textContent = 
+                result_summary.processing_time ? 
+                `${result_summary.processing_time.toFixed(2)}s` : 'N/A';
+            document.getElementById('totalPersons').textContent = result_summary.total_persons || 0;
+            document.getElementById('cheatingPersons').textContent = 
+                result_summary.cheating_persons ? result_summary.cheating_persons.length : 0;
+
+            // Show incidents if any
+            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+                const incidentsSection = document.getElementById('incidentsSection');
+                const incidentsList = document.getElementById('incidentsList');
+
+                incidentsSection.style.display = 'block';
+
+                result_summary.cheating_persons.forEach(personId => {
+                    const item = document.createElement('div');
+                    item.className = 'incident-item';
+                    item.innerHTML = `
+                        <div class="incident-info">
+                            <span class="incident-time">Person ID: ${personId}</span>
+                            <span class="incident-confidence">Flagged</span>
+                        </div>
+                    `;
+                    incidentsList.appendChild(item);
+                });
+            }
+        }
+
+        document.getElementById('downloadReport').addEventListener('click', () => {
+            // Create a simple text report
+            let report = `CHEATING DETECTION REPORT\n`;
+            report += `========================\n\n`;
+            report += `Filename: ${filename}\n`;
+            report += `Total Persons: ${result_summary.total_persons || 0}\n`;
+            report += `Cheating Persons: ${result_summary.cheating_persons ? result_summary.cheating_persons.length : 0}\n`;
+            report += `Total Frames: ${result_summary.total_frames || 0}\n`;
+            report += `Processing Time: ${result_summary.processing_time ? result_summary.processing_time.toFixed(2) : 'N/A'}s\n\n`;
+            
+            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+                report += `Cheating Person IDs:\n`;
+                result_summary.cheating_persons.forEach(id => {
+                    report += `- Person ${id}\n`;
+                });
+            }
+
+            // Download as text file
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${filename}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+
+        // Load results on page load
+        loadResults();
+    </script>
+</body>
+</html>
