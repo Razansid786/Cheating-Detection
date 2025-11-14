@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 import cv2
 
-model = YOLO('models/best.pt')
+model = YOLO('models/yolov8m_best.pt')
 
 results = model('test_image/test2.png')
 

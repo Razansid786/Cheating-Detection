@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheating Detection - Upload Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragging {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            color: #999;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-preview {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+        }
+
+        .file-preview.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            display: none;
+            width: 100%;
+            height: 25px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Cheating Detection System</h1>
+        <p class="subtitle">Upload your video for analysis</p>
+
+        <!-- Upload Area -->
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📹</div>
+            <p class="upload-text">Drag & Drop video here or click to browse</p>
+            <p class="file-info">Supported: MP4, AVI, MOV, MKV, FLV (Max 500MB)</p>
+        </div>
+
+        <!-- Hidden File Input -->
+        <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.mkv,.flv">
+
+        <!-- File Preview -->
+        <div class="file-preview" id="filePreview">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText"></div>
+
+        <!-- Status Message -->
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing video... Please wait</p>
+        </div>
+
+        <!-- Process Button -->
+        <button class="btn" id="processBtn" disabled>Select a video first</button>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const processBtn = document.getElementById('processBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
+        const loading = document.getElementById('loading');
+
+        let selectedFile = null;
+        let uploadedFilename = null;
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File selected via input
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragging');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragging');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragging');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        // Handle file
+        function handleFile(file) {
+            if (!file) return;
+            
+            // Validate file type
+            const validTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-matroska', 'video/x-flv'];
+            if (!validTypes.includes(file.type) && !file.name.match(/\.(mp4|avi|mov|mkv|flv)$/i)) {
+                showStatus('Invalid file type! Please upload a video file.', 'error');
+                return;
+            }
+
+            // Validate file size (500MB)
+            if (file.size > 500 * 1024 * 1024) {
+                showStatus('File too large! Maximum size is 500MB.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // Show file details
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            filePreview.classList.add('show');
+
+            // Enable process button
+            processBtn.textContent = 'Upload & Process Video';
+            processBtn.disabled = false;
+
+            // Upload immediately
+            uploadFile(file);
+        }
+
+        // Upload file
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('video', file);
+
+            progressBar.classList.add('show');
+            const xhr = new XMLHttpRequest();
+
+            // Progress tracking
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = (e.loaded / e.total) * 100;
+                    progressFill.style.width = percent + '%';
+                    progressText.textContent = `Uploading: ${Math.round(percent)}%`;
+                }
+            });
+
+            // Upload complete
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    uploadedFilename = response.filename;
+                    showStatus('Upload successful! Click process to analyze.', 'success');
+                    processBtn.textContent = 'Process Video';
+                } else {
+                    const error = JSON.parse(xhr.responseText);
+                    showStatus('Upload failed: ' + error.error, 'error');
+                    resetUpload();
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                showStatus('Upload failed. Please try again.', 'error');
+                resetUpload();
+            });
+
+            xhr.open('POST', '/upload');
+            xhr.send(formData);
+        }
+
+        // Process video
+        processBtn.addEventListener('click', () => {
+            if (!uploadedFilename) {
+                showStatus('Please upload a video first', 'error');
+                return;
+            }
+
+            processBtn.disabled = true;
+            loading.classList.add('show');
+            statusMessage.classList.remove('show');
+
+            fetch(`/process/${uploadedFilename}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = `/results/${uploadedFilename}`;
+                    } else {
+                        showStatus('Processing failed: ' + data.error, 'error');
+                        processBtn.disabled = false;
+                        loading.classList.remove('show');
+                    }
+                })
+                .catch(error => {
+                    showStatus('Error: ' + error, 'error');
+                    processBtn.disabled = false;
+                    loading.classList.remove('show');
+                });
+        });
+
+        // Helper functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message show ' + type;
+        }
+
+        function resetUpload() {
+            selectedFile = null;
+            uploadedFilename = null;
+            fileInput.value = '';
+            filePreview.classList.remove('show');
+            progressBar.classList.remove('show');
+            processBtn.disabled = true;
+            processBtn.textContent = 'Select a video first';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results - Cheating Detection{% endblock %}
+
+{% block content %}
+<div class="results-section">
+    <h2>Analysis Results</h2>
+    
+    <div class="loading-results" id="loadingResults">
+        <div class="spinner"></div>
+        <p>Loading results...</p>
+    </div>
+
+    <div class="results-content" id="resultsContent" style="display: none;">
+        <div class="status-card" id="statusCard">
+            <div class="status-icon" id="statusIcon"></div>
+            <h3 id="statusTitle"></h3>
+            <p id="statusMessage"></p>
+        </div>
+
+        <div class="results-grid">
+            <div class="result-card">
+                <h4>Video Information</h4>
+                <div class="info-item">
+                    <span class="label">Duration:</span>
+                    <span class="value" id="duration"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Resolution:</span>
+                    <span class="value" id="resolution"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">FPS:</span>
+                    <span class="value" id="fps"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Total Frames:</span>
+                    <span class="value" id="totalFrames"></span>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h4>Detection Summary</h4>
+                <div class="info-item">
+                    <span class="label">Frames Analyzed:</span>
+                    <span class="value" id="framesAnalyzed"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Suspicious Frames:</span>
+                    <span class="value" id="suspiciousFrames"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">Average Confidence:</span>
+                    <span class="value" id="avgConfidence"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="incidents-section" id="incidentsSection" style="display: none;">
+            <h4>Detected Incidents</h4>
+            <div class="incidents-list" id="incidentsList"></div>
+        </div>
+
+        <div class="actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Analyze Another Video</a>
+            <button class="btn btn-secondary" id="downloadReport">Download Report</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const filename = "{{ filename }}";
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function loadResults() {
+        fetch(`/process/${filename}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayResults(data.results);
+                } else {
+                    alert('Failed to load results: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error loading results: ' + error);
+            });
+    }
+
+    function displayResults(results) {
+        const videoInfo = results.video_info;
+        const detection = results.detection_results;
+
+        // Hide loading, show results
+        document.getElementById('loadingResults').style.display = 'none';
+        document.getElementById('resultsContent').style.display = 'block';
+
+        // Status card
+        const statusCard = document.getElementById('statusCard');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
+
+        if (detection.overall_status === 'Cheating Detected') {
+            statusCard.classList.add('alert');
+            statusIcon.textContent = '⚠️';
+            statusTitle.textContent = 'Cheating Detected';
+            statusMessage.textContent = `Suspicious activity detected in ${detection.cheating_detected_frames.length} frames.`;
+        } else {
+            statusCard.classList.add('success');
+            statusIcon.textContent = '✓';
+            statusTitle.textContent = 'No Cheating Detected';
+            statusMessage.textContent = 'The video analysis did not detect any suspicious activity.';
+        }
+
+        // Video info
+        document.getElementById('duration').textContent = formatTime(videoInfo.duration);
+        document.getElementById('resolution').textContent = videoInfo.resolution;
+        document.getElementById('fps').textContent = videoInfo.fps.toFixed(2);
+        document.getElementById('totalFrames').textContent = videoInfo.total_frames;
+
+        // Detection summary
+        document.getElementById('framesAnalyzed').textContent = detection.total_frames;
+        document.getElementById('suspiciousFrames').textContent = detection.cheating_detected_frames.length;
+        document.getElementById('avgConfidence').textContent = 
+            detection.avg_confidence ? (detection.avg_confidence * 100).toFixed(1) + '%' : 'N/A';
+
+        // Incidents
+        if (detection.cheating_detected_frames.length > 0) {
+            const incidentsSection = document.getElementById('incidentsSection');
+            const incidentsList = document.getElementById('incidentsList');
+            incidentsSection.style.display = 'block';
+
+            detection.timestamps.forEach((timestamp, index) => {
+                const incident = document.createElement('div');
+                incident.className = 'incident-item';
+                incident.innerHTML = `
+                    <div class="incident-info">
+                        <span class="incident-time">${formatTime(timestamp)}</span>
+                        <span class="incident-confidence">Confidence: ${(detection.confidence_scores[index] * 100).toFixed(1)}%</span>
+                    </div>
+                `;
+                incidentsList.appendChild(incident);
+            });
+        }
+    }
+
+    document.getElementById('downloadReport').addEventListener('click', () => {
+        alert('Report download functionality coming soon!');
+    });
+
+    // Load results on page load
+    loadResults();
+</script>
+{% endblock %}
