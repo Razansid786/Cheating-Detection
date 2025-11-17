@@ -279,115 +279,191 @@
     </div>
 
     <script>
-        // Get data from Flask (Jinja2)
-        const result_summary = {{ summary | tojson | safe }};
-        const filename = "{{ filename }}";
+    // Get data from Flask - Already a JSON string, just parse it
+    const result_summary_str = '{{ summary|safe }}';
+    const filename = "{{ filename }}";
+    const output_video = "{{ output_video }}";
 
-        console.log('Result summary:', result_summary);
-        console.log('Filename:', filename);
+    console.log('Raw summary string:', result_summary_str);
+    console.log('Filename:', filename);
+    console.log('Output video path:', output_video);
 
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
+    // Parse the string to object
+    let result_summary = {};
+    try {
+        result_summary = JSON.parse(result_summary_str);
+        console.log('✓ Parsed result summary:', result_summary);
+        console.log('  Total persons:', result_summary.total_persons);
+        console.log('  Cheating persons:', result_summary.cheating_persons);
+        console.log('  Total frames:', result_summary.total_frames);
+    } catch (error) {
+        console.error('❌ Failed to parse summary:', error);
+        console.log('Raw summary string:', result_summary_str);
+        // Provide default empty object
+        result_summary = {
+            total_persons: 0,
+            cheating_persons: [],
+            total_frames: 0,
+            processing_time: 0
+        };
+    }
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function loadResults() {
+        // Hide loader, show content
+        document.getElementById('loadingResults').style.display = 'none';
+        document.getElementById('resultsContent').style.display = 'block';
+
+        console.log('Loading results with summary:', result_summary);
+
+        // Check if data exists
+        if (!result_summary || typeof result_summary !== 'object') {
+            alert('Error: No summary data received from server');
+            return;
         }
 
-        function loadResults() {
-            // Hide loader, show content
-            document.getElementById('loadingResults').style.display = 'none';
-            document.getElementById('resultsContent').style.display = 'block';
-
-            // Check if data exists
-            if (!result_summary) {
-                alert('Error: No summary data received from server');
-                return;
-            }
-
-            // If backend error
-            if (result_summary.error) {
-                alert(result_summary.error);
-                // Still show the UI with default values
-            }
-
-            // Status card
-            const statusCard = document.getElementById('statusCard');
-            const statusIcon = document.getElementById('statusIcon');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusMessage = document.getElementById('statusMessage');
-
-            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
-                statusCard.classList.add('alert');
-                statusIcon.textContent = '⚠️';
-                statusTitle.textContent = 'Cheating Detected';
-                statusMessage.textContent = 
-                    `Detected ${result_summary.cheating_persons.length} suspicious individual(s).`;
-            } else {
-                statusCard.classList.add('success');
-                statusIcon.textContent = '✓';
-                statusTitle.textContent = 'No Cheating Detected';
-                statusMessage.textContent = 'No suspicious behavior detected in the video.';
-            }
-
-            // Fill info fields
-            document.getElementById('totalFrames').textContent = result_summary.total_frames || 'N/A';
-            document.getElementById('framesAnalyzed').textContent = result_summary.total_frames || 'N/A';
-            document.getElementById('processingTime').textContent = 
-                result_summary.processing_time ? 
-                `${result_summary.processing_time.toFixed(2)}s` : 'N/A';
-            document.getElementById('totalPersons').textContent = result_summary.total_persons || 0;
-            document.getElementById('cheatingPersons').textContent = 
-                result_summary.cheating_persons ? result_summary.cheating_persons.length : 0;
-
-            // Show incidents if any
-            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
-                const incidentsSection = document.getElementById('incidentsSection');
-                const incidentsList = document.getElementById('incidentsList');
-
-                incidentsSection.style.display = 'block';
-
-                result_summary.cheating_persons.forEach(personId => {
-                    const item = document.createElement('div');
-                    item.className = 'incident-item';
-                    item.innerHTML = `
-                        <div class="incident-info">
-                            <span class="incident-time">Person ID: ${personId}</span>
-                            <span class="incident-confidence">Flagged</span>
-                        </div>
-                    `;
-                    incidentsList.appendChild(item);
-                });
-            }
+        // If backend error
+        if (result_summary.error) {
+            console.warn('Summary error:', result_summary.error);
+            // Still show the UI with default values
         }
 
-        document.getElementById('downloadReport').addEventListener('click', () => {
-            // Create a simple text report
-            let report = `CHEATING DETECTION REPORT\n`;
-            report += `========================\n\n`;
-            report += `Filename: ${filename}\n`;
-            report += `Total Persons: ${result_summary.total_persons || 0}\n`;
-            report += `Cheating Persons: ${result_summary.cheating_persons ? result_summary.cheating_persons.length : 0}\n`;
-            report += `Total Frames: ${result_summary.total_frames || 0}\n`;
-            report += `Processing Time: ${result_summary.processing_time ? result_summary.processing_time.toFixed(2) : 'N/A'}s\n\n`;
-            
-            if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
-                report += `Cheating Person IDs:\n`;
-                result_summary.cheating_persons.forEach(id => {
-                    report += `- Person ${id}\n`;
-                });
-            }
+        // Status card
+        const statusCard = document.getElementById('statusCard');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
 
-            // Download as text file
-            const blob = new Blob([report], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `report_${filename}.txt`;
-            a.click();
-            window.URL.revokeObjectURL(url);
+        if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+            statusCard.classList.add('alert');
+            statusIcon.textContent = '⚠️';
+            statusTitle.textContent = 'Cheating Detected';
+            statusMessage.textContent = 
+                `Detected ${result_summary.cheating_persons.length} suspicious individual(s).`;
+        } else {
+            statusCard.classList.add('success');
+            statusIcon.textContent = '✅';
+            statusTitle.textContent = 'No Cheating Detected';
+            statusMessage.textContent = 'No suspicious behavior detected in the video.';
+        }
+
+        // Fill info fields with logging
+        const totalFrames = result_summary.total_frames || 'N/A';
+        const processingTime = result_summary.processing_time;
+        const totalPersons = result_summary.total_persons || 0;
+        const cheatingPersons = result_summary.cheating_persons ? result_summary.cheating_persons.length : 0;
+
+        console.log('Setting UI values:');
+        console.log('  Total frames:', totalFrames);
+        console.log('  Processing time:', processingTime);
+        console.log('  Total persons:', totalPersons);
+        console.log('  Cheating persons:', cheatingPersons);
+
+        document.getElementById('totalFrames').textContent = totalFrames;
+        document.getElementById('framesAnalyzed').textContent = totalFrames;
+        document.getElementById('processingTime').textContent = 
+            processingTime ? `${processingTime.toFixed(2)}s` : 'N/A';
+        document.getElementById('totalPersons').textContent = totalPersons;
+        document.getElementById('cheatingPersons').textContent = cheatingPersons;
+
+        // Show incidents if any
+        if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+            const incidentsSection = document.getElementById('incidentsSection');
+            const incidentsList = document.getElementById('incidentsList');
+
+            incidentsSection.style.display = 'block';
+
+            result_summary.cheating_persons.forEach(personId => {
+                const item = document.createElement('div');
+                item.className = 'incident-item';
+                item.innerHTML = `
+                    <div class="incident-info">
+                        <span class="incident-time">Person ID: ${personId}</span>
+                        <span class="incident-confidence">Flagged</span>
+                    </div>
+                `;
+                incidentsList.appendChild(item);
+            });
+        }
+
+        // Setup video with error handling
+        setupVideo();
+    }
+
+    function setupVideo() {
+        const videoElement = document.getElementById('outputVideo');
+        const videoSource = videoElement.querySelector('source');
+        
+        console.log('Video source URL:', videoSource.src);
+
+        // Add event listeners for video debugging
+        videoElement.addEventListener('loadeddata', () => {
+            console.log('✓ Video loaded successfully');
+            console.log('  Duration:', videoElement.duration, 'seconds');
+            console.log('  Dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
         });
 
-        // Load results on page load
-        loadResults();
-    </script>
+        videoElement.addEventListener('error', (e) => {
+            console.error('❌ Video loading error:', e);
+            console.error('  Error code:', videoElement.error ? videoElement.error.code : 'unknown');
+            console.error('  Error message:', videoElement.error ? videoElement.error.message : 'unknown');
+            
+            // Display error message to user
+            const videoSection = document.querySelector('.video-section');
+            videoSection.innerHTML = `
+                <h4>Processed Video</h4>
+                <div style="background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; text-align: center;">
+                    <p><strong>⚠️ Video Loading Error</strong></p>
+                    <p>Could not load the processed video.</p>
+                    <p style="font-size: 12px; margin-top: 10px;">Path: ${output_video}</p>
+                    <p style="font-size: 12px;">Check browser console for details.</p>
+                </div>
+            `;
+        });
+
+        videoElement.addEventListener('loadstart', () => {
+            console.log('Video loading started...');
+        });
+
+        videoElement.addEventListener('canplay', () => {
+            console.log('✓ Video can play');
+        });
+    }
+
+    document.getElementById('downloadReport').addEventListener('click', () => {
+        // Create a simple text report
+        let report = `CHEATING DETECTION REPORT\n`;
+        report += `========================\n\n`;
+        report += `Filename: ${filename}\n`;
+        report += `Total Persons: ${result_summary.total_persons || 0}\n`;
+        report += `Cheating Persons: ${result_summary.cheating_persons ? result_summary.cheating_persons.length : 0}\n`;
+        report += `Total Frames: ${result_summary.total_frames || 0}\n`;
+        report += `Processing Time: ${result_summary.processing_time ? result_summary.processing_time.toFixed(2) : 'N/A'}s\n\n`;
+        
+        if (result_summary.cheating_persons && result_summary.cheating_persons.length > 0) {
+            report += `Cheating Person IDs:\n`;
+            result_summary.cheating_persons.forEach(id => {
+                report += `- Person ${id}\n`;
+            });
+        }
+
+        // Download as text file
+        const blob = new Blob([report], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${filename}.txt`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+
+    // Load results on page load
+    loadResults();
+</script>
 </body>
 </html>

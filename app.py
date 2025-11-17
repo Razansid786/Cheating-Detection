@@ -2,12 +2,20 @@ from flask import Flask, render_template, request, jsonify
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
-import cv2
 import numpy as np
 from ultralytics import YOLO
 import json
+from ultralytics import YOLO
+import cv2
+import os
+import time
+from collections import defaultdict, OrderedDict
+import numpy as np
+import subprocess
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder='static',
+            static_url_path='/static')
 app.secret_key = '!bandar-bhalu'
 model = YOLO("models/yolov8m_best.pt")
 
@@ -18,6 +26,7 @@ def allowed_file(filename):
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'static/outputs'
 SUMMARY_FOLDER = 'summary'
+TEMP_FOLDER = 'temp_output'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
 MAX_FILE_SIZE = 500 * 1024 * 1024  
 
@@ -26,12 +35,6 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 
 # ===================================================== Model Predict ==========================================
-from ultralytics import YOLO
-import cv2
-import os
-import time
-from collections import defaultdict, OrderedDict
-import numpy as np
 
 # ============================================================
 # IMPROVED TRACKING CLASSES
@@ -262,6 +265,40 @@ class PersonTracker:
 # ============================================================
 # HELPER FUNCTIONS
 # ============================================================
+
+def convert_video_for_web(input_path, output_path):
+    """Convert video to web-compatible format using ffmpeg"""
+    try:
+        # Check if ffmpeg is available
+        subprocess.run(['ffmpeg', '-version'], 
+                      stdout=subprocess.DEVNULL, 
+                      stderr=subprocess.DEVNULL, 
+                      check=True)
+        
+        # Convert video to web-compatible format
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-c:v', 'libx264',           # H.264 video codec
+            '-preset', 'medium',          # Encoding speed
+            '-crf', '23',                 # Quality (lower = better, 23 is good)
+            '-c:a', 'aac',                # AAC audio codec
+            '-b:a', '128k',               # Audio bitrate
+            '-movflags', '+faststart',    # Enable streaming
+            '-y',                         # Overwrite output file
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True, capture_output=True)
+        print(f"✓ Video converted for web: {output_path}")
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f"❌ FFmpeg conversion failed: {e}")
+        return False
+    except FileNotFoundError:
+        print("⚠️ FFmpeg not found. Install it for web-compatible videos.")
+        return False
 
 def calculate_iou(box1, box2):
     """Calculate IoU between two boxes"""
@@ -753,12 +790,17 @@ def process_video(filename):
         
         # Output filename (same name but in outputs folder)
         base_name = os.path.splitext(filename)[0]
-        output_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
+        #output_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
+        temp_path = os.path.join(TEMP_FOLDER, f"{base_name}_out.mp4")
         summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
+        print(f"DEBUG - Paths:")
+        print(f"  Input exists: {os.path.exists(input_path)} - {input_path}")
+        print(f"  Output dir exists: {os.path.exists(os.path.dirname(temp_path))} - {os.path.dirname(temp_path)}")
+        print(f"  Output path: {temp_path}")
             
         summary = process_video_with_stable_tracking(
-            input_video_path=f"uploads/{filename}.mp4",
-            output_video_path=f"outputs/{filename}_out.mp4",
+            input_video_path=input_path,
+            output_video_path=temp_path,
             behavior_model_path="models/yolov8m_best.pt",
             person_model_path=None,  # Uses YOLOv8n pretrained
             person_conf_threshold=0.7  # Higher = fewer false positives (try 0.6-0.8)
@@ -774,26 +816,77 @@ def process_video(filename):
         
     
 
+# @app.route('/results/<filename>')
+# def show_results(filename):
+    
+    
+#     base_name = os.path.splitext(filename)[0]
+        
+#     summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
+#     # output_video_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
+#     output_video_path = f"outputs\{base_name}_out.mp4"
+    
+#     summary = {}
+#     if os.path.exists(summary_path):
+#         with open(summary_path, 'r', encoding='utf-8') as fh:
+#             summary = json.load(fh)
+#     else:
+#     # You can choose to abort(404) here or pass empty summary & message to template
+#         summary = {'error': 'summary not available (processing may have failed or not finished yet)'}
+    
+#     return render_template('results.html', filename=filename, summary=summary,
+#                            output_video=output_video_path)
 @app.route('/results/<filename>')
 def show_results(filename):
-    
-    
     base_name = os.path.splitext(filename)[0]
-        
-    summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
-    output_video_path = f"outputs/{base_name}_out.mp4"
     
+    # Full path for reading the summary file
+    summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
+    
+    # Relative path for url_for (use forward slashes, no 'static/' prefix)
+    output_video_path = f"outputs/{base_name}_out.mp4"  # ✅ Forward slash!
+    
+    temp_output = os.path.join(TEMP_FOLDER, f"{base_name}_out.mp4")
+    final_output = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
+    
+    if os.path.exists(temp_output) and not os.path.exists(final_output):
+        convert_video_for_web(temp_output, final_output)
+        os.remove(temp_output) 
+    
+    # Load summary
     summary = {}
     if os.path.exists(summary_path):
         with open(summary_path, 'r', encoding='utf-8') as fh:
             summary = json.load(fh)
+        print(f"✓ Summary loaded successfully:")
+        print(f"  Total persons: {summary.get('total_persons', 'N/A')}")
+        print(f"  Cheating persons: {summary.get('cheating_persons', [])}")
+        print(f"  Total frames: {summary.get('total_frames', 'N/A')}")
+        print(f"  Processing time: {summary.get('processing_time', 'N/A')}")
     else:
-    # You can choose to abort(404) here or pass empty summary & message to template
-        summary = {'error': 'summary not available (processing may have failed or not finished yet)'}
+        print(f"⚠️ Summary file not found at: {summary_path}")
+        summary = {
+            'error': 'Summary not available',
+            'total_persons': 0,
+            'cheating_persons': [],
+            'total_frames': 0,
+            'processing_time': 0
+        }
     
-    return render_template('results.html', filename=filename, summary=summary,
-                           output_video=output_video_path)
-
+    # Verify output video exists
+    video_full_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
+    if os.path.exists(video_full_path):
+        print(f"✓ Output video found at: {video_full_path}")
+    else:
+        print(f"⚠️ Output video NOT found at: {video_full_path}")
+    
+    # Convert summary to JSON string for JavaScript
+    summary_json = json.dumps(summary)
+    
+    return render_template('results.html', 
+                         filename=filename, 
+                         summary=summary_json,  # ✅ Pass as JSON string
+                         output_video=output_video_path)
 
 @app.route('/delete/<filename>', methods=['DELETE'])
 def delete_video(filename):
@@ -845,18 +938,3 @@ if __name__ == '__main__':
     print("="*50)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
