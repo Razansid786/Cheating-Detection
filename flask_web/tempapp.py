@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import os
+import shutil
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import numpy as np
 from ultralytics import YOLO
 import json
-from ultralytics import YOLO
 import cv2
 import os
 import time
@@ -17,14 +17,15 @@ app = Flask(__name__,
             static_folder='static',
             static_url_path='/static')
 app.secret_key = '!bandar-bhalu'
-model = YOLO("models/yolov8m_best.pt")
+behaviour_model_path = "./models/yolov8m_best.pt"
+person_model_path = "./models/yolov8n.pt"
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
     ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 UPLOAD_FOLDER = 'uploads'
-OUTPUT_FOLDER = 'static/outputs'
+OUTPUT_FOLDER = 'TEMP_output'
 SUMMARY_FOLDER = 'summary'
 TEMP_FOLDER = 'temp_output'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
@@ -435,7 +436,7 @@ def get_bright_color(person_id):
 # ============================================================
 
 def process_video_with_stable_tracking(input_video_path, output_video_path, 
-                                       behavior_model_path, person_model_path=None,
+                                       behavior_model_path, person_model_path,
                                        person_conf_threshold=0.7):
     """
     Process video with stable person tracking
@@ -457,12 +458,12 @@ def process_video_with_stable_tracking(input_video_path, output_video_path,
     behavior_model = YOLO(behavior_model_path)
     print(f"✓ Behavior model: {list(behavior_model.names.values())}")
     
-    if person_model_path is None:
-        person_model = YOLO('yolov8n.pt')
-        print("✓ Person detector: YOLOv8n (pretrained)")
-    else:
-        person_model = YOLO(person_model_path)
-        print(f"✓ Person detector: Custom model")
+    # if person_model_path is None:
+    #     person_model = YOLO('yolov8n.pt')
+    #     print("✓ Person detector: YOLOv8n (pretrained)")
+    # else:
+    #     print(f"✓ Person detector: Custom model")
+    person_model = YOLO(person_model_path)
     
     # Open video
     print("\n[2/8] Opening video...")
@@ -485,7 +486,7 @@ def process_video_with_stable_tracking(input_video_path, output_video_path,
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
     print(f"✓ Output: {output_video_path}")
     
@@ -791,7 +792,7 @@ def process_video(filename):
         # Output filename (same name but in outputs folder)
         base_name = os.path.splitext(filename)[0]
         #output_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
-        temp_path = os.path.join(TEMP_FOLDER, f"{base_name}_out.mp4")
+        temp_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
         summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
         print(f"DEBUG - Paths:")
         print(f"  Input exists: {os.path.exists(input_path)} - {input_path}")
@@ -801,10 +802,14 @@ def process_video(filename):
         summary = process_video_with_stable_tracking(
             input_video_path=input_path,
             output_video_path=temp_path,
-            behavior_model_path="models/yolov8m_best.pt",
-            person_model_path=None,  # Uses YOLOv8n pretrained
+            behavior_model_path="../models/yolov8m_best.pt",
+            person_model_path="../models/yolov8n.pt",  # Uses YOLOv8n pretrained
             person_conf_threshold=0.7  # Higher = fewer false positives (try 0.6-0.8)
         )
+        
+        output_video_path = os.path.join(app.static_folder, "outputs", f"{base_name}_out.mp4")
+        shutil.move(temp_path, output_video_path)
+
         with open(summary_path, 'w', encoding='utf-8') as fh:
             json.dump(summary, fh, ensure_ascii=False, indent=2)
         
@@ -844,16 +849,8 @@ def show_results(filename):
     summary_path = os.path.join(SUMMARY_FOLDER, f"{base_name}_summary.json")
     
     # Relative path for url_for (use forward slashes, no 'static/' prefix)
-    output_video_path = f"outputs/{base_name}_out.mp4"  # ✅ Forward slash!
-    
-    temp_output = os.path.join(TEMP_FOLDER, f"{base_name}_out.mp4")
-    final_output = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
-    
-    if os.path.exists(temp_output) and not os.path.exists(final_output):
-        convert_video_for_web(temp_output, final_output)
-        os.remove(temp_output) 
-    
-    # Load summary
+    output_video_path = f"outputs/{base_name}_out.mp4"
+
     summary = {}
     if os.path.exists(summary_path):
         with open(summary_path, 'r', encoding='utf-8') as fh:
@@ -874,12 +871,6 @@ def show_results(filename):
         }
     
     # Verify output video exists
-    video_full_path = os.path.join(OUTPUT_FOLDER, f"{base_name}_out.mp4")
-    if os.path.exists(video_full_path):
-        print(f"✓ Output video found at: {video_full_path}")
-    else:
-        print(f"⚠️ Output video NOT found at: {video_full_path}")
-    
     # Convert summary to JSON string for JavaScript
     summary_json = json.dumps(summary)
     

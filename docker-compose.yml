@@ -1,0 +1,21 @@
+services:
+  mlflow_server:
+      build:
+        context: ./mlflow_server
+      container_name: mlflow_server
+      ports:
+        - "5001:5000"
+      volumes:
+        - ./mlflow_server:/mlflow
+      restart: unless-stopped
+  web_app:
+      build:
+        context: ./flask_web
+      container_name: app
+      ports:
+        - "8000:8000"
+      depends_on:
+        - mlflow_server   
+      environment:
+        - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+      restart: unless-stopped

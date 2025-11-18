@@ -1,0 +1,14 @@
+FROM python:3.10
+
+WORKdir /mlflow_server
+
+RUN pip install mlflow==2.14 psycopg2-binary boto3
+
+EXPOSE 5000
+
+COPY entrypoint.sh .
+COPY mlflow.py .
+
+RUN chmod +x entrypoint.sh
+
+CMD ["./entrypoint.sh"]
