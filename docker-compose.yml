@@ -1,21 +1,68 @@
+# services:
+#   mlflow_server:
+#       build:
+#         context: ./mlflow_server
+#       container_name: mlflow_server
+#       ports:
+#         - "5001:5000"
+#       volumes:
+#         - ./mlflow_server:/mlflow
+#       restart: unless-stopped
+#   web_app:
+#       build:
+#         context: ./flask_web
+#       container_name: app
+#       ports:
+#         - "8000:8000"
+#       depends_on:
+#         - mlflow_server   
+#       environment:
+#         - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+#       restart: unless-stopped
+
+version: '3.8'
+
 services:
   mlflow_server:
-      build:
-        context: ./mlflow_server
-      container_name: mlflow_server
-      ports:
-        - "5001:5000"
-      volumes:
-        - ./mlflow_server:/mlflow
-      restart: unless-stopped
-  web_app:
-      build:
-        context: ./flask_web
-      container_name: app
-      ports:
-        - "8000:8000"
-      depends_on:
-        - mlflow_server   
-      environment:
-        - MLFLOW_TRACKING_URI=http://mlflow_server:5000
-      restart: unless-stopped
+    build:
+      context: ./mlflow_server
+      #dockerfile: Dockerfile.mlflow
+    container_name: mlflow_server
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/app/mlruns
+      - ./models:/app/models
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  flask_web:
+    build:
+      context: ./flask_web
+      #dockerfile: Dockerfile.flask
+    container_name: flask_web
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./TEMP_output:/app/TEMP_output
+      - ./summary:/app/summary
+      - ./static:/app/static
+    depends_on:
+      - mlflow_server
+    networks:
+      - app_network
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  mlflow_data:

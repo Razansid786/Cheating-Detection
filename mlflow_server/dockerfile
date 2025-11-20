@@ -1,14 +1,27 @@
 FROM python:3.10
 
-WORKdir /mlflow_server
+WORKDIR /mlflow_server
 
-RUN pip install mlflow==2.14 psycopg2-binary boto3
+# Install system dependencies for OpenCV
+
+
+# Install MLflow and required packages using Alibaba mirror
+RUN pip install --timeout=1000 --retries=5 \
+    --index-url https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    mlflow==2.9.2 \
+    ultralytics
+
+# Copy MLflow script and models
+COPY mlflow.py .
+COPY entrypoint.sh .
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
+# Create directories for MLflow
+RUN mkdir -p /mlflow_server/mlruns
 
 EXPOSE 5000
-
-COPY entrypoint.sh .
-COPY mlflow.py .
-
-RUN chmod +x entrypoint.sh
 
 CMD ["./entrypoint.sh"]

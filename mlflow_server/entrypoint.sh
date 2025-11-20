@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 # Start MLflow tracking server in background
 mlflow server \

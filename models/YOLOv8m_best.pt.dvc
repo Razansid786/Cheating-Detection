@@ -1,0 +1,5 @@
+outs:
+- md5: 114b153d88e47a726e3c76ee0072729c
+  size: 52037778
+  hash: md5
+  path: YOLOv8m_best.pt
