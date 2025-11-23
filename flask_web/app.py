@@ -18,15 +18,105 @@ ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # ======================= MLflow Model Loading =======================
-model_name = "cheating-detector_model"
-model_uri = f"models:/{model_name}/latest"
-local_path = mlflow.artifacts.download_artifacts(model_uri=model_uri)
-behavior_model = YOLO(local_path)
 
+# model_name = "cheating-detector_model"
+# model_uri = f"models:/{model_name}/latest"
+# local_path = mlflow.artifacts.download_artifacts(artifact_uri=model_uri)
+# model_file = os.path.join(local_path, "YOLOv8m_best.pt")
+
+# # behavior_model = YOLO(local_path)
+
+# if not os.path.exists(model_file):
+#     # If not there, maybe it's the directory itself
+#     model_file = local_path if local_path.endswith('.pt') else model_file
+
+# behavior_model = YOLO(model_file)
+# print(f"✓ Cheating detector loaded from: {model_file}")
+
+
+# model_name = "person-detector_model"
+# model_uri = f"models:/{model_name}/latest"
+# local_path = mlflow.artifacts.download_artifacts(artifact_uri=model_uri)
+# # person_model = YOLO(local_path)
+
+# model_file = os.path.join(local_path, "YOLOv8n.pt")
+# if not os.path.exists(model_file):
+#     model_file = local_path if local_path.endswith('.pt') else model_file
+
+# person_model = YOLO(model_file)
+# print(f"✓ Person detector loaded from: {model_file}")
+
+from mlflow.tracking import MlflowClient
+client = MlflowClient()
+os.makedirs("./models_cache", exist_ok=True)
+
+# Load person detector model
 model_name = "person-detector_model"
-model_uri = f"models:/{model_name}/latest"
-local_path = mlflow.artifacts.download_artifacts(model_uri=model_uri)
-person_model = YOLO(local_path)
+
+try:
+    # Get the registered model
+    model_versions = client.search_model_versions(f"name='{model_name}'")
+    if not model_versions:
+        raise ValueError(f"No versions found for model: {model_name}")
+    
+    latest = sorted(model_versions, key=lambda x: int(x.version), reverse=True)[0]
+    run_id = latest.run_id
+    
+    print(f"Loading {model_name} from run: {run_id}")
+    
+    # Download the artifact - use the exact path from MLflow UI
+    model_path = client.download_artifacts(
+        run_id, 
+        "models/YOLOv8n.pt",  # Exact path from your screenshot
+        dst_path="./models_cache"
+    )
+    
+    # Load YOLO model
+    person_model = YOLO(model_path)
+    print(f"✓ Person detector loaded from: {model_path}")
+    
+except Exception as e:
+    print(f"Error loading person detector: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+
+# Load cheating detector model (same approach)
+model_name = "cheating-detector_model"
+
+try:
+    model_versions = client.search_model_versions(f"name='{model_name}'")
+    if not model_versions:
+        raise ValueError(f"No versions found for model: {model_name}")
+    
+    latest = sorted(model_versions, key=lambda x: int(x.version), reverse=True)[0]
+    run_id = latest.run_id
+    
+    print(f"Loading {model_name} from run: {run_id}")
+    
+    # Check what path the cheating detector uses
+    # It's probably "models/YOLOv8m_best.pt" based on your earlier logs
+    model_path = client.download_artifacts(
+        run_id, 
+        "models/YOLOv8m_best.pt",  # Adjust if different
+        dst_path="./models_cache"
+    )
+    
+    behavior_model = YOLO(model_path)
+    print(f"✓ Cheating detector loaded from: {model_path}")
+    
+except Exception as e:
+    print(f"Error loading cheating detector: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+
+print("\n" + "="*50)
+print("Cheating Detection System Starting...")
+print("="*50)
+# Initialize MLflow client
+
+# Load cheating detector model
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -170,7 +260,7 @@ def process_video_with_stable_tracking(input_path, output_path, behavior_model, 
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened(): print("❌ Error: Could not open video"); return
     w,h,fps,total_frames = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FPS)), int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (w,h))
 
     tracker = PersonTracker(max_disappeared=60,max_distance=200)
@@ -257,8 +347,18 @@ def process_video(filename):
     summary_path=os.path.join(SUMMARY_FOLDER,f"{os.path.splitext(filename)[0]}_summary.json")
 
     summary=process_video_with_stable_tracking(input_path,temp_path,behavior_model,person_model)
-    shutil.move(temp_path, os.path.join(app.static_folder,"outputs",os.path.basename(temp_path)))
-    with open(summary_path,'w',encoding='utf-8') as f: json.dump(summary,f,ensure_ascii=False,indent=2)
+    # shutil.move(temp_path, os.path.join(app.static_folder,"outputs",os.path.basename(temp_path)))
+    # with open(summary_path,'w',encoding='utf-8') as f: json.dump(summary,f,ensure_ascii=False,indent=2)
+    h264_temp = temp_path.replace('.mp4', '_h264_temp.mp4')
+    subprocess.run(['ffmpeg', '-i', temp_path, '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-y', h264_temp])
+    os.remove(temp_path)
+    os.rename(h264_temp, temp_path)
+
+    
+    shutil.move(temp_path, os.path.join(app.static_folder, "outputs", os.path.basename(temp_path)))
+    
+    with open(summary_path, 'w', encoding='utf-8') as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
     return jsonify({'success':True}),200
 
 @app.route('/results/<filename>')

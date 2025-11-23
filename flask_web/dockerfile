@@ -61,25 +61,68 @@
 # CMD ["python", "app.py"]
 
 
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+
+FROM ultralytics/ultralytics:latest
 
 WORKDIR /app
 
+# Install minimal dependencies
 RUN apt-get update && apt-get install -y \
+
     libgl1 \
     libglib2.0-0 \
-    libglib2.0-dev \
     libsm6 \
+    libxrender1 \
     libxext6 \
-    libxrender-dev \
+    ffmpeg \
+    libavcodec-extra \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir --timeout=1000 --retries=5 \
-    --index-url https://mirrors.aliyun.com/pypi/simple/ \
-    --trusted-host mirrors.aliyun.com \
+# Install CPU PyTorch FIRST (explicit CPU version)
+# RUN pip install --no-cache-dir --timeout=1000 \
+#     torch==2.1.0+cpu \
+#     torchvision==0.16.0+cpu \
+#     --index-url https://download.pytorch.org/whl/cpu
+
+# Then install other packages
+RUN pip install --timeout=1000 \
     -r requirements.txt
+
 COPY . .
 
-CMD ["python", "app.py"]
+CMD ["python", "app.py"]\
+
+
+
+# FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+
+# WORKDIR /app
+
+# # Install system dependencies efficiently
+# RUN apt-get update && apt-get install -y \
+#     libgl1 \
+#     libglib2.0-0 \
+#     libsm6 \
+#     libxext6 \
+#     libxrender-dev \
+#     curl \
+#     && rm -rf /var/lib/apt/lists/* \
+#     && apt-get clean
+
+# # Copy requirements first for better caching
+# COPY requirements.txt .
+
+
+# RUN pip install --upgrade pip
+# # Install Python dependencies with better caching
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# # Copy application code
+# COPY . .
+
+# # Create necessary directories
+# RUN mkdir -p uploads TEMP_output summary static/outputs
+
+# CMD ["python", "app.py"]

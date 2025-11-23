@@ -20,49 +20,109 @@
 #         - MLFLOW_TRACKING_URI=http://mlflow_server:5000
 #       restart: unless-stopped
 
-version: '3.8'
+# services:
+#   mlflow_server:
+#     build:
+#       context: ./mlflow_server
+#       #dockerfile: Dockerfile.mlflow
+#     container_name: mlflow_server
+#     ports:
+#       - "5000:5000"
+#     volumes:
+#       - mlflow_data:/app/mlruns
+#       - ./models:/app/models
+#     networks:
+#       - app_network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+
+#   flask_web:
+#     build:
+#       context: ./flask_web
+#       #dockerfile: Dockerfile.flask
+#     container_name: flask_web
+#     ports:
+#       - "5001:5000"
+#     volumes:
+#       - ./uploads:/app/uploads
+#       - ./TEMP_output:/app/TEMP_output
+#       - ./summary:/app/summary
+#       - ./static:/app/static
+#     depends_on:
+#       - mlflow_server
+#     networks:
+#       - app_network
+#     environment:
+#       - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+
+# networks:
+#   app_network:
+#     driver: bridge
+
+# volumes:
+#   mlflow_data:
+
+
 
 services:
   mlflow_server:
     build:
       context: ./mlflow_server
-      #dockerfile: Dockerfile.mlflow
     container_name: mlflow_server
     ports:
       - "5000:5000"
     volumes:
-      - mlflow_data:/app/mlruns
-      - ./models:/app/models
+      - mlflow_data:/mlflow_server/mlruns
+      - ./mlflow_server/models:/mlflow_server/models:ro  # Mount models as read-only
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   flask_web:
     build:
       context: ./flask_web
-      #dockerfile: Dockerfile.flask
     container_name: flask_web
     ports:
       - "5001:5000"
     volumes:
-      - ./uploads:/app/uploads
-      - ./TEMP_output:/app/TEMP_output
-      - ./summary:/app/summary
-      - ./static:/app/static
+      - uploads_data:/app/uploads
+      - mlflow_data:/mlflow_server/mlruns  # ADD THIS - share mlflow data
+
+      - ./models:/app/models  # ADD THIS LINE - mount your models folder
+      - temp_output_data:/app/TEMP_output
+      - summary_data:/app/summary
+      - static_data:/app/static
+      - ./mlflow_server/models:/mlflow_server/models:ro  # Mount models as read-only
+
     depends_on:
-      - mlflow_server
+      mlflow_server:
+        condition: service_healthy
     networks:
       - app_network
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   app_network:
     driver: bridge
 
 volumes:
+  mlflow-artifacts:
   mlflow_data:
+  uploads_data:
+  temp_output_data:
+  summary_data:
+  static_data:

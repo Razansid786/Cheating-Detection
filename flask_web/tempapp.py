@@ -12,13 +12,21 @@ import time
 from collections import defaultdict, OrderedDict
 import numpy as np
 import subprocess
+from pathlib import Path
+
 
 app = Flask(__name__,
             static_folder='static',
             static_url_path='/static')
 app.secret_key = '!bandar-bhalu'
-behaviour_model_path = "./models/yolov8m_best.pt"
-person_model_path = "./models/yolov8n.pt"
+# original_dir = os.getcwd()
+# PROJECT_ROOT = Path(__file__).parent.parent  # Adjust based on your structure
+# MODELS_DIR = PROJECT_ROOT / "models"
+# os.chdir(PROJECT_ROOT)
+
+# subprocess.run(["dvc", "pull", "models/YOLOv8m_best.pt.dvc"], check=True)
+# subprocess.run(["dvc", "pull", "models/YOLOv8n.pt.dvc"], check=True)
+# os.chdir(original_dir)
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
