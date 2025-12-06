@@ -5,48 +5,25 @@ from datetime import datetime
 from collections import defaultdict, OrderedDict
 import cv2, numpy as np
 from ultralytics import YOLO
+from flask import send_file
+from mlflow.tracking import MlflowClient
 import mlflow
 
 app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = '!bandar-bhalu'
 
-UPLOAD_FOLDER = 'uploads'
-OUTPUT_FOLDER = 'TEMP_output'
-SUMMARY_FOLDER = 'summary'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+OUTPUT_FOLDER = os.path.join(BASE_DIR, 'TEMP_output')
+SUMMARY_FOLDER = os.path.join(BASE_DIR, 'summary')
+
+
 MAX_FILE_SIZE = 500 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # ======================= MLflow Model Loading =======================
-
-# model_name = "cheating-detector_model"
-# model_uri = f"models:/{model_name}/latest"
-# local_path = mlflow.artifacts.download_artifacts(artifact_uri=model_uri)
-# model_file = os.path.join(local_path, "YOLOv8m_best.pt")
-
-# # behavior_model = YOLO(local_path)
-
-# if not os.path.exists(model_file):
-#     # If not there, maybe it's the directory itself
-#     model_file = local_path if local_path.endswith('.pt') else model_file
-
-# behavior_model = YOLO(model_file)
-# print(f"✓ Cheating detector loaded from: {model_file}")
-
-
-# model_name = "person-detector_model"
-# model_uri = f"models:/{model_name}/latest"
-# local_path = mlflow.artifacts.download_artifacts(artifact_uri=model_uri)
-# # person_model = YOLO(local_path)
-
-# model_file = os.path.join(local_path, "YOLOv8n.pt")
-# if not os.path.exists(model_file):
-#     model_file = local_path if local_path.endswith('.pt') else model_file
-
-# person_model = YOLO(model_file)
-# print(f"✓ Person detector loaded from: {model_file}")
-
-from mlflow.tracking import MlflowClient
 client = MlflowClient()
 os.makedirs("./models_cache", exist_ok=True)
 
@@ -64,14 +41,13 @@ try:
     
     print(f"Loading {model_name} from run: {run_id}")
     
-    # Download the artifact - use the exact path from MLflow UI
+    # Download the artifact 
     model_path = client.download_artifacts(
         run_id, 
-        "models/YOLOv8n.pt",  # Exact path from your screenshot
+        "models/YOLOv8n.pt", 
         dst_path="./models_cache"
     )
     
-    # Load YOLO model
     person_model = YOLO(model_path)
     print(f"✓ Person detector loaded from: {model_path}")
     
@@ -94,11 +70,9 @@ try:
     
     print(f"Loading {model_name} from run: {run_id}")
     
-    # Check what path the cheating detector uses
-    # It's probably "models/YOLOv8m_best.pt" based on your earlier logs
     model_path = client.download_artifacts(
         run_id, 
-        "models/YOLOv8m_best.pt",  # Adjust if different
+        "models/YOLOv8m_best.pt",  
         dst_path="./models_cache"
     )
     
@@ -114,9 +88,6 @@ except Exception as e:
 print("\n" + "="*50)
 print("Cheating Detection System Starting...")
 print("="*50)
-# Initialize MLflow client
-
-# Load cheating detector model
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -232,6 +203,7 @@ def associate_parts_with_persons(person_bboxes, part_detections, iou_thresh=0.1)
         if best_pid: assoc[best_pid].append(part)
     return assoc
 
+
 def make_cheating_decision(detection_history, total_frames):
     if not detection_history: return "UNKNOWN","No detections",0.0
     counts = defaultdict(int)
@@ -268,8 +240,10 @@ def process_video_with_stable_tracking(input_path, output_path, behavior_model, 
 
     frame_count = 0
     start_time = time.time()
+    
 
     while True:
+        
         ret, frame = cap.read()
         if not ret: break
         frame_count +=1
@@ -322,7 +296,10 @@ def process_video_with_stable_tracking(input_path, output_path, behavior_model, 
     print(f"\nCheating persons: {sorted(cheating_persons)}")
     print("Processing complete!")
     return {'total_persons':len(person_histories),'cheating_persons':list(sorted(cheating_persons)),'total_frames':frame_count,'processing_time':time.time()-start_time}
+    
 
+    
+    
 # ======================= Flask Routes =======================
 @app.route('/')
 def index(): return render_template('index.html')
@@ -347,15 +324,12 @@ def process_video(filename):
     summary_path=os.path.join(SUMMARY_FOLDER,f"{os.path.splitext(filename)[0]}_summary.json")
 
     summary=process_video_with_stable_tracking(input_path,temp_path,behavior_model,person_model)
-    # shutil.move(temp_path, os.path.join(app.static_folder,"outputs",os.path.basename(temp_path)))
-    # with open(summary_path,'w',encoding='utf-8') as f: json.dump(summary,f,ensure_ascii=False,indent=2)
     h264_temp = temp_path.replace('.mp4', '_h264_temp.mp4')
     subprocess.run(['ffmpeg', '-i', temp_path, '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-y', h264_temp])
-    os.remove(temp_path)
     os.rename(h264_temp, temp_path)
 
     
-    shutil.move(temp_path, os.path.join(app.static_folder, "outputs", os.path.basename(temp_path)))
+    shutil.copy(temp_path, os.path.join(app.static_folder, "outputs", os.path.basename(temp_path)))
     
     with open(summary_path, 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
@@ -363,18 +337,70 @@ def process_video(filename):
 
 @app.route('/results/<filename>')
 def show_results(filename):
-    summary_path=os.path.join(SUMMARY_FOLDER,f"{os.path.splitext(filename)[0]}_summary.json")
-    output_video_path=f"outputs/{os.path.splitext(filename)[0]}_out.mp4"
+    summary_path = os.path.join(SUMMARY_FOLDER, f"{os.path.splitext(filename)[0]}_summary.json")
+    output_video_path = f"outputs/{os.path.splitext(filename)[0]}_out.mp4"
+
+    download_path = os.path.join(OUTPUT_FOLDER, f"{os.path.splitext(filename)[0]}_out.mp4")
+    
     if os.path.exists(summary_path):
-        with open(summary_path,'r',encoding='utf-8') as f: summary=json.load(f)
-    else: summary={'error':'Summary not available','total_persons':0,'cheating_persons':[],'total_frames':0,'processing_time':0}
-    return render_template('results.html',filename=filename,summary=json.dumps(summary),output_video=output_video_path)
+        with open(summary_path, 'r', encoding='utf-8') as f: 
+            summary = json.load(f)
+    else: 
+        summary = {'error': 'Summary not available', 'total_persons': 0, 'cheating_persons': [], 'total_frames': 0, 'processing_time': 0}
+    
+    return render_template('results.html',
+                           filename=filename,
+                           summary=json.dumps(summary),
+                           output_video=output_video_path,
+                           download_path=download_path)
+
+@app.route('/download_result/<filename>')
+def download_result(filename):
+    download_path = os.path.join(OUTPUT_FOLDER, f"{os.path.splitext(filename)[0]}_out.mp4")
+    return send_file(download_path, as_attachment=True)
 
 @app.route('/delete/<filename>',methods=['DELETE'])
 def delete_video(filename):
-    filepath=os.path.join(UPLOAD_FOLDER,filename)
-    if os.path.exists(filepath): os.remove(filepath); return jsonify({'success':True,'message':'File deleted'}),200
-    return jsonify({'error':'File not found'}),404
+
+    name_without_ext, ext = os.path.splitext(filename)
+    
+    print(f"Deleting files for: {filename}")
+    print(f"Name without extension: {name_without_ext}")
+    print(f"Extension: {ext}")
+    
+    filepaths = [
+        os.path.join(UPLOAD_FOLDER, filename),
+        os.path.join(OUTPUT_FOLDER, name_without_ext + '_out' + ext),
+        os.path.join(SUMMARY_FOLDER, name_without_ext + '_summary.json'),
+        os.path.join("static", "outputs", name_without_ext + '_out' + ext),
+    ]
+
+    deleted = False
+    deleted_files = []
+
+    print("Searching for files:")
+    for path in filepaths:
+        print(f"  Checking: {path}")
+        if os.path.exists(path):
+            os.remove(path)
+            deleted = True
+            deleted_files.append(os.path.basename(path))
+            print(f"  ✓ Deleted: {path}")
+
+    if deleted:
+        return jsonify({
+            'success': True, 
+            'message': f'{len(deleted_files)} file(s) deleted',
+            'deleted_files': deleted_files
+        }), 200
+    else:
+        return jsonify({
+            'error': 'No files found to delete',
+            'debug': {
+                'filename': filename,
+                'searched_paths': [os.path.basename(p) for p in filepaths]
+            }
+        }), 404
 
 @app.errorhandler(413)
 def too_large(e): return jsonify({'error':'File too large. Max 500MB'}),413
@@ -389,4 +415,6 @@ if __name__=='__main__':
     print("Cheating Detection System Starting...")
     print(f"Upload folder: {UPLOAD_FOLDER} | Allowed formats: {', '.join(ALLOWED_EXTENSIONS)} | Max size: {MAX_FILE_SIZE//(1024*1024)}MB")
     print("="*50)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)
+    
+    

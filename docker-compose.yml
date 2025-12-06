@@ -1,82 +1,14 @@
-# services:
-#   mlflow_server:
-#       build:
-#         context: ./mlflow_server
-#       container_name: mlflow_server
-#       ports:
-#         - "5001:5000"
-#       volumes:
-#         - ./mlflow_server:/mlflow
-#       restart: unless-stopped
-#   web_app:
-#       build:
-#         context: ./flask_web
-#       container_name: app
-#       ports:
-#         - "8000:8000"
-#       depends_on:
-#         - mlflow_server   
-#       environment:
-#         - MLFLOW_TRACKING_URI=http://mlflow_server:5000
-#       restart: unless-stopped
-
-# services:
-#   mlflow_server:
-#     build:
-#       context: ./mlflow_server
-#       #dockerfile: Dockerfile.mlflow
-#     container_name: mlflow_server
-#     ports:
-#       - "5000:5000"
-#     volumes:
-#       - mlflow_data:/app/mlruns
-#       - ./models:/app/models
-#     networks:
-#       - app_network
-#     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-#       interval: 30s
-#       timeout: 10s
-#       retries: 3
-
-#   flask_web:
-#     build:
-#       context: ./flask_web
-#       #dockerfile: Dockerfile.flask
-#     container_name: flask_web
-#     ports:
-#       - "5001:5000"
-#     volumes:
-#       - ./uploads:/app/uploads
-#       - ./TEMP_output:/app/TEMP_output
-#       - ./summary:/app/summary
-#       - ./static:/app/static
-#     depends_on:
-#       - mlflow_server
-#     networks:
-#       - app_network
-#     environment:
-#       - MLFLOW_TRACKING_URI=http://mlflow_server:5000
-
-# networks:
-#   app_network:
-#     driver: bridge
-
-# volumes:
-#   mlflow_data:
-
-
-
 services:
   mlflow_server:
     build:
       context: ./mlflow_server
+    image: razansid786/cheating-detection-mlflow:v1
     container_name: mlflow_server
     ports:
       - "5000:5000"
     volumes:
       - mlflow_data:/mlflow_server/mlruns
-      - ./mlflow_server/models:/mlflow_server/models:ro  # Mount models as read-only
+      - ./mlflow_server/models:/mlflow_server/models:ro  
     networks:
       - app_network
     healthcheck:
@@ -89,18 +21,18 @@ services:
   flask_web:
     build:
       context: ./flask_web
+    image: razansid786/cheating-detection-web:v1
     container_name: flask_web
     ports:
-      - "5001:5000"
+      - "5001:5001"
     volumes:
-      - uploads_data:/app/uploads
-      - mlflow_data:/mlflow_server/mlruns  # ADD THIS - share mlflow data
-
-      - ./models:/app/models  # ADD THIS LINE - mount your models folder
-      - temp_output_data:/app/TEMP_output
-      - summary_data:/app/summary
-      - static_data:/app/static
-      - ./mlflow_server/models:/mlflow_server/models:ro  # Mount models as read-only
+      - ./flask_web/uploads:/app/uploads
+      - ./flask_web/TEMP_output:/app/TEMP_output
+      - ./flask_web/summary:/app/summary
+      - ./flask_web/static:/app/static
+      - ./flask_web/models_cache:/app/models_cache
+      - mlflow_data:/mlflow_server/mlruns 
+      - ./mlflow_server/models:/mlflow_server/models:ro  
 
     depends_on:
       mlflow_server:

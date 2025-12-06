@@ -210,38 +210,31 @@
         <h1>🎓 Cheating Detection System</h1>
         <p class="subtitle">Upload your video for analysis</p>
 
-        <!-- Upload Area -->
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📹</div>
             <p class="upload-text">Drag & Drop video here or click to browse</p>
             <p class="file-info">Supported: MP4, AVI, MOV, MKV, FLV (Max 500MB)</p>
         </div>
 
-        <!-- Hidden File Input -->
         <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.mkv,.flv">
 
-        <!-- File Preview -->
         <div class="file-preview" id="filePreview">
             <div class="file-name" id="fileName"></div>
             <div class="file-size" id="fileSize"></div>
         </div>
 
-        <!-- Progress Bar -->
         <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
         <div class="progress-text" id="progressText"></div>
 
-        <!-- Status Message -->
         <div class="status-message" id="statusMessage"></div>
 
-        <!-- Loading Indicator -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Processing video... Please wait</p>
         </div>
 
-        <!-- Process Button -->
         <button class="btn" id="processBtn" disabled>Select a video first</button>
     </div>
 
@@ -291,14 +284,12 @@
         function handleFile(file) {
             if (!file) return;
             
-            // Validate file type
             const validTypes = ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-matroska', 'video/x-flv'];
             if (!validTypes.includes(file.type) && !file.name.match(/\.(mp4|avi|mov|mkv|flv)$/i)) {
                 showStatus('Invalid file type! Please upload a video file.', 'error');
                 return;
             }
 
-            // Validate file size (500MB)
             if (file.size > 500 * 1024 * 1024) {
                 showStatus('File too large! Maximum size is 500MB.', 'error');
                 return;
@@ -306,7 +297,6 @@
 
             selectedFile = file;
             
-            // Show file details
             fileName.textContent = file.name;
             fileSize.textContent = formatFileSize(file.size);
             filePreview.classList.add('show');
@@ -315,11 +305,9 @@
             processBtn.textContent = 'Upload & Process Video';
             processBtn.disabled = false;
 
-            // Upload immediately
             uploadFile(file);
         }
 
-        // Upload file
         function uploadFile(file) {
             const formData = new FormData();
             formData.append('video', file);

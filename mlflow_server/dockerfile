@@ -1,77 +1,21 @@
-# FROM python:3.10
-
-# WORKDIR /mlflow_server
-
-# # Install system dependencies for OpenCV
-
-
-# # Install MLflow and required packages using Alibaba mirror
-# RUN pip install --timeout=1000 --retries=5 \
-#     --index-url https://mirrors.aliyun.com/pypi/simple/ \
-#     --trusted-host mirrors.aliyun.com \
-#     mlflow==2.9.2 \
-#     ultralytics
-
-# # Copy MLflow script and models
-# COPY mlflow.py /mlflow_server/
-# COPY entrypoint.sh .
-
-# # Make entrypoint executable
-# RUN chmod +x entrypoint.sh
-
-# # Create directories for MLflow
-# RUN mkdir -p /mlflow_server/mlruns
-
-# EXPOSE 5000
-
-# CMD ["./entrypoint.sh"]
-
-# FROM python:3.10
-
-# WORKDIR /mlflow_server
-
-# # Install system dependencies for OpenCV
-
-# RUN apt-get update && apt-get install -y \
-#     libgl1 \
-#     libglib2.0-0
-# # Install MLflow and required packages using Alibaba mirror
-# RUN pip install --timeout=1000 --retries=5 \
-#     mlflow==2.9.2 \
-#     ultralytics
-
-# # Copy MLflow script and models
-# COPY mlflow.py .
-# COPY entrypoint.sh .
-
-# # Make entrypoint executable
-# RUN chmod +x entrypoint.sh
-
-# # Create directories for MLflow
-# RUN mkdir -p /mlflow_server/mlruns
-
-# EXPOSE 5000
-
-# CMD ["./entrypoint.sh"]
-
 FROM ultralytics/ultralytics:latest
 
 WORKDIR /mlflow_server
 
 RUN pip install --upgrade pip
 
-# Install MLflow
-RUN pip install --timeout=1000 --retries=5 mlflow==2.9.2 dvc dvc-s3 
+RUN pip install --timeout=1000 --retries=5 \
+    --index-url https://mirrors.aliyun.com/pypi/simple/ \
+    --extra-index-url https://pypi.org/simple \
+    --trusted-host mirrors.aliyun.com \
+    mlflow==2.9.2 dvc dvc-s3
 
-# Copy MLflow script and entrypoint
 COPY server.py .
 COPY entrypoint.sh .
 COPY models/ models/
 
-# Make entrypoint executable
 RUN chmod +x entrypoint.sh
 
-# Create directories for MLflow
 RUN mkdir -p /mlflow_server/mlruns
 
 EXPOSE 5000

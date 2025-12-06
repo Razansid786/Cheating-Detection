@@ -1,28 +1,6 @@
 import mlflow
 from ultralytics import YOLO
 from pathlib import Path
-import os
-import subprocess
-
-# PROJECT_ROOT = Path(__file__).parent.parent  # Adjust based on your structure
-# MLFLOW_MODELS_DIR = PROJECT_ROOT / "mlflow_server" / "models"
-# os.chdir(PROJECT_ROOT)
-# original_dir = os.getcwd()
-
-# subprocess.run(
-#         ["dvc", "pull", "mlflow_server/models/YOLOv8m_best.pt.dvc"],
-#         check=True,
-#         capture_output=True,
-#         text=True
-#     )
-    
-# subprocess.run(
-#         ["dvc", "pull", "mlflow_server/models/YOLOv8n.pt.dvc"],
-#         check=True,
-#         capture_output=True,
-#         text=True
-#     )
-# os.chdir(original_dir)
 
 mlflow.set_tracking_uri("http://mlflow_server:5000")
 mlflow.set_experiment("cheating_detection_experiment")

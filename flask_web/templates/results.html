@@ -210,6 +210,35 @@
             display: block;
             margin: 0 auto;
         }
+        .btn-exit {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-exit:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            min-width: 200px;
+        }
     </style>
 </head>
 <body>
@@ -272,14 +301,15 @@
             </div>
 
             <div class="actions">
-                <a href="{{ url_for('index') }}" class="btn btn-primary">Analyze Another Video</a>
+                <button class="btn btn-primary" id="analyzeAnother">Analyze Another Video</button>
                 <button class="btn btn-secondary" id="downloadReport">Download Report</button>
+                <button class="btn btn-secondary" id="downloadVideo" style="background: #28a745; color: white;">Download Video</button>
+                <button class="btn btn-exit" id="exitApp">Exit App</button>
             </div>
         </div>
     </div>
 
     <script>
-    // Get data from Flask - Already a JSON string, just parse it
     const result_summary_str = '{{ summary|safe }}';
     const filename = "{{ filename }}";
     const output_video = "{{ output_video }}";
@@ -299,7 +329,6 @@
     } catch (error) {
         console.error('❌ Failed to parse summary:', error);
         console.log('Raw summary string:', result_summary_str);
-        // Provide default empty object
         result_summary = {
             total_persons: 0,
             cheating_persons: [],
@@ -315,7 +344,6 @@
     }
 
     function loadResults() {
-        // Hide loader, show content
         document.getElementById('loadingResults').style.display = 'none';
         document.getElementById('resultsContent').style.display = 'block';
 
@@ -352,7 +380,6 @@
             statusMessage.textContent = 'No suspicious behavior detected in the video.';
         }
 
-        // Fill info fields with logging
         const totalFrames = result_summary.total_frames || 'N/A';
         const processingTime = result_summary.processing_time;
         const totalPersons = result_summary.total_persons || 0;
@@ -434,9 +461,75 @@
             console.log('✓ Video can play');
         });
     }
+    // Handle Analyze Another Video button
+    document.getElementById('analyzeAnother').addEventListener('click', async function() {
+        const button = this;
+        const originalText = button.textContent;
+        
+        // Show loading state
+        button.textContent = 'Cleaning up...';
+        button.disabled = true;
+
+        try {
+            // Delete files before navigating
+            const response = await fetch(`/delete/${filename}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                console.log('✓ Files deleted successfully');
+            } else {
+                console.warn('⚠️ Some files may not have been deleted');
+            }
+            
+            // Navigate to index page
+            window.location.href = "{{ url_for('index') }}";
+            
+        } catch (error) {
+            console.error('❌ Cleanup error:', error);
+            // Still navigate to index even on error
+            window.location.href = "{{ url_for('index') }}";
+        }
+    });
+
+    // Handle Exit App button
+    document.getElementById('exitApp').addEventListener('click', async function() {
+        const button = this;
+        const originalText = button.textContent;
+        
+        // Show loading state
+        button.textContent = 'Exiting...';
+        button.disabled = true;
+
+        try {
+            // Delete files before exiting
+            const response = await fetch(`/delete/${filename}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                console.log('✓ Files deleted successfully');
+            } else {
+                console.warn('⚠️ Some files may not have been deleted');
+            }
+            
+            window.close();
+            
+            setTimeout(() => {
+                alert('You can now safely close this browser tab.');
+            }, 500);
+            
+        } catch (error) {
+            console.error('❌ Exit error:', error);
+            window.close();
+            setTimeout(() => {
+                alert('You can now safely close this browser tab.');
+            }, 500);
+        }
+    });
+
 
     document.getElementById('downloadReport').addEventListener('click', () => {
-        // Create a simple text report
         let report = `CHEATING DETECTION REPORT\n`;
         report += `========================\n\n`;
         report += `Filename: ${filename}\n`;
@@ -460,6 +553,22 @@
         a.download = `report_${filename}.txt`;
         a.click();
         window.URL.revokeObjectURL(url);
+    });
+    document.getElementById('downloadVideo').addEventListener('click', function() {
+        const button = this;
+        const downloadUrl = `/download_result/${filename}`;
+        
+        // Create temporary link to trigger download
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+        }, 100);
     });
 
     // Load results on page load
