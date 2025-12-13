@@ -1,4 +1,8 @@
 [core]
-    remote = myremote
+    remote = dvcstorage
 ['remote "myremote"']
     url = C:/Users/Manal/dvc-storage
+['remote "gdrive"']
+    url = gdrive://1HS116E5eOTPTlU9Hd3oI7fYU3mtTGIqZ
+['remote "dvcstorage"']
+    url = D:\Code Library\Codes\ML Ops\dvc-storage

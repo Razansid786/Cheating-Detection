@@ -4,84 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* --- VIBRANT FORMAL THEME (CSS ONLY CHANGE) --- */
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            /* Gradients for status */
+            --success-grad: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            --alert-grad: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+            --btn-grad: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
         }
 
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            /* Deep Tech Background */
+            background-image: 
+                radial-gradient(at 47% 33%, hsl(220.87, 69.17%, 23.53%) 0, transparent 59%), 
+                radial-gradient(at 82% 65%, hsl(218.11, 74.4%, 18.43%) 0, transparent 55%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 40px 20px;
+            color: var(--text-main);
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
 
         h1 {
-            color: #667eea;
+            color: var(--text-main);
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
+        /* Status Card Styles to match JS .success and .alert */
         .status-card {
-            padding: 30px;
-            border-radius: 10px;
+            padding: 40px;
+            border-radius: 24px;
             text-align: center;
             margin-bottom: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
+        /* Success State */
         .status-card.success {
-            background: #d4edda;
-            color: #155724;
-            border: 2px solid #c3e6cb;
+            background: var(--success-grad);
+            border: none;
+            color: white;
+            box-shadow: 0 10px 40px -10px rgba(16, 185, 129, 0.6);
         }
 
+        /* Alert State */
         .status-card.alert {
-            background: #f8d7da;
-            color: #721c24;
-            border: 2px solid #f5c6cb;
+            background: var(--alert-grad);
+            border: none;
+            color: white;
+            box-shadow: 0 10px 40px -10px rgba(220, 38, 38, 0.6);
         }
 
         .status-icon {
             font-size: 60px;
             margin-bottom: 15px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+        
+        /* Force styling on the H3 inside status card */
+        .status-card h3 {
+            color: white !important; /* Override any potential inheritance */
+            font-size: 2rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .status-card p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
         }
 
         .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            gap: 25px;
             margin-bottom: 30px;
         }
 
         .result-card {
-            background: #f8f9ff;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #667eea;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            padding: 30px;
+            border-radius: 20px;
+            border: var(--glass-border);
+            box-shadow: 0 10px 30px -5px rgba(0,0,0,0.3);
         }
 
         .result-card h4 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 18px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
         }
 
         .info-item {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
         .info-item:last-child {
@@ -89,31 +133,43 @@
         }
 
         .label {
-            font-weight: bold;
-            color: #666;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
         .value {
-            color: #333;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 1.1rem;
         }
+        
+        /* Make important numbers pop */
+        #cheatingPersons { color: #f87171; text-shadow: 0 0 10px rgba(248, 113, 113, 0.5); }
+        #totalPersons { color: #22d3ee; }
 
         .incidents-section {
             margin-top: 30px;
         }
 
         .incidents-section h4 {
-            color: #667eea;
-            margin-bottom: 15px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
         }
 
         .incident-item {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid #ffc107;
+            background: rgba(220, 38, 38, 0.15); /* Red glass */
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            display: flex; /* Ensure layout matches new CSS */
+            flex-direction: column; /* Keep column for the inner html structure */
         }
 
+        /* Since the JS injects .incident-info inside .incident-item, we style that */
         .incident-info {
             display: flex;
             justify-content: space-between;
@@ -121,123 +177,142 @@
         }
 
         .incident-time {
-            font-weight: bold;
-            color: #856404;
+            font-weight: 600;
+            color: #fca5a5; /* Light red */
         }
 
         .incident-confidence {
-            background: #ffc107;
-            padding: 5px 10px;
-            border-radius: 5px;
-            color: #856404;
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            padding: 5px 12px;
+            border-radius: 6px;
+            color: white;
             font-size: 12px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #764ba2;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .loading-results {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            font-weight: 700;
+            box-shadow: 0 2px 5px rgba(220, 38, 38, 0.4);
         }
 
         .video-section {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9ff;
-            border-radius: 10px;
+            margin-top: 40px;
+            padding: 30px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border-radius: 20px;
+            border: var(--glass-border);
+            /* Cyan glow */
+            box-shadow: 0 0 30px -10px rgba(6, 182, 212, 0.2);
         }
 
         .video-section h4 {
-            color: #667eea;
-            margin-bottom: 15px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
         }
 
         video {
             width: 100%;
-            max-width: 800px;
-            border-radius: 10px;
+            max-width: 900px;
+            border-radius: 12px;
             display: block;
             margin: 0 auto;
-        }
-        .btn-exit {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-exit:hover {
-            background: #c82333;
-            transform: translateY(-2px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .actions {
             display: flex;
-            gap: 15px;
-            margin-top: 30px;
+            gap: 20px;
+            margin-top: 40px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
         .btn {
             padding: 15px 30px;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             cursor: pointer;
             border: none;
             text-decoration: none;
             display: inline-block;
             transition: all 0.3s;
-            min-width: 200px;
+            font-weight: 600;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        /* Analyze Another (Primary) */
+        .btn-primary {
+            background: var(--btn-grad);
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.6);
+            filter: brightness(1.1);
+        }
+
+        /* Download Buttons (Secondary) */
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Specific override for the green download button in original HTML */
+        button#downloadVideo {
+            background: rgba(16, 185, 129, 0.1) !important;
+            border: 1px solid rgba(16, 185, 129, 0.4) !important;
+            color: #34d399 !important;
+        }
+        button#downloadVideo:hover {
+            background: rgba(16, 185, 129, 0.2) !important;
+            transform: translateY(-3px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Exit Button */
+        .btn-exit {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-exit:hover {
+            background: #b91c1c;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.6);
+        }
+
+        .loading-results {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #06b6d4;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -247,7 +322,7 @@
 
         <div class="loading-results" id="loadingResults">
             <div class="spinner"></div>
-            <p>Loading results...</p>
+            <p style="color: #94a3b8;">Loading results...</p>
         </div>
 
         <div class="results-content" id="resultsContent" style="display: none;">
@@ -303,7 +378,7 @@
             <div class="actions">
                 <button class="btn btn-primary" id="analyzeAnother">Analyze Another Video</button>
                 <button class="btn btn-secondary" id="downloadReport">Download Report</button>
-                <button class="btn btn-secondary" id="downloadVideo" style="background: #28a745; color: white;">Download Video</button>
+                <button class="btn btn-secondary" id="downloadVideo">Download Video</button>
                 <button class="btn btn-exit" id="exitApp">Exit App</button>
             </div>
         </div>
@@ -444,7 +519,7 @@
             const videoSection = document.querySelector('.video-section');
             videoSection.innerHTML = `
                 <h4>Processed Video</h4>
-                <div style="background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; text-align: center;">
+                <div style="background: rgba(220, 38, 38, 0.2); color: #fca5a5; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid rgba(220, 38, 38, 0.4);">
                     <p><strong>⚠️ Video Loading Error</strong></p>
                     <p>Could not load the processed video.</p>
                     <p style="font-size: 12px; margin-top: 10px;">Path: ${output_video}</p>
@@ -576,4 +651,3 @@
 </script>
 </body>
 </html>
-

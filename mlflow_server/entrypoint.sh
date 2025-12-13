@@ -11,8 +11,6 @@ mlflow server \
     --host 0.0.0.0 \
     --port 5000 &
 
-# Wait for MLflow server to start
-sleep 15
 
 echo "Running MLflow model registration..."
 python /mlflow_server/server.py

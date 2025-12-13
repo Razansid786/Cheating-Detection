@@ -1,3 +1,6 @@
 venv/
 mlflow_server/models/
 flask_web/models_cache/models/
+mlflow_server/__pycache__
+.dvc/
+venv_clean/

@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import os, shutil, json, time, subprocess
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import time
 from collections import defaultdict, OrderedDict
 import cv2, numpy as np
 from ultralytics import YOLO
@@ -24,6 +25,7 @@ ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'flv'}
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
 # ======================= MLflow Model Loading =======================
+time.sleep(30)
 client = MlflowClient()
 os.makedirs("./models_cache", exist_ok=True)
 

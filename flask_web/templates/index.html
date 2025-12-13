@@ -4,105 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cheating Detection - Upload Video</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* --- VIBRANT FORMAL THEME (CSS ONLY CHANGE) --- */
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+            --primary-gradient: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); /* Cyan to Blue */
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
         }
 
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif; /* Cleaner font */
+            background-color: var(--bg-dark);
+            /* Deep Tech Background */
+            background-image: 
+                radial-gradient(at 47% 33%, hsl(220.87, 69.17%, 23.53%) 0, transparent 59%), 
+                radial-gradient(at 82% 65%, hsl(218.11, 74.4%, 18.43%) 0, transparent 55%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            color: var(--text-main);
         }
 
         .container {
-            background: white;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            border-radius: 24px;
+            border: var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             max-width: 600px;
             width: 100%;
+            transition: transform 0.3s ease;
         }
 
         h1 {
-            color: #667eea;
+            color: var(--text-main);
             text-align: center;
             margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            /* Gradient Text Effect */
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
             text-align: center;
-            color: #666;
+            color: var(--text-muted);
             margin-bottom: 30px;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
         }
 
         .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 10px;
+            border: 2px dashed rgba(6, 182, 212, 0.3); /* Cyan dashed border */
+            border-radius: 16px;
             padding: 60px 20px;
             text-align: center;
-            background: #f8f9ff;
+            background: rgba(15, 23, 42, 0.4);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .upload-area:hover {
-            border-color: #764ba2;
-            background: #f0f2ff;
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.1) inset;
+            transform: translateY(-2px);
         }
 
         .upload-area.dragging {
-            border-color: #764ba2;
-            background: #e8ebff;
+            border-color: #06b6d4;
+            background: rgba(6, 182, 212, 0.1);
         }
 
         .upload-icon {
-            font-size: 60px;
+            font-size: 50px;
             margin-bottom: 15px;
+            filter: drop-shadow(0 0 10px rgba(6,182,212,0.5));
         }
 
         .upload-text {
             font-size: 18px;
-            color: #333;
+            color: var(--text-main);
             margin-bottom: 10px;
+            font-weight: 600;
         }
 
         .file-info {
-            color: #999;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
 
         .btn {
-            background: #667eea;
+            background: var(--primary-gradient);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
+            padding: 16px 30px;
+            border-radius: 12px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             width: 100%;
-            margin-top: 20px;
-            transition: all 0.3s;
+            margin-top: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
         }
 
         .btn:hover {
-            background: #764ba2;
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.6);
+            filter: brightness(1.1);
         }
 
         .btn:disabled {
-            background: #ccc;
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-muted);
             cursor: not-allowed;
+            box-shadow: none;
             transform: none;
         }
 
@@ -110,93 +141,92 @@
             display: none;
             margin-top: 20px;
             padding: 15px;
-            background: #f8f9ff;
-            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border: var(--glass-border);
         }
 
-        .file-preview.show {
-            display: block;
-        }
+        .file-preview.show { display: block; }
 
         .file-name {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: var(--text-main);
             margin-bottom: 5px;
         }
 
         .file-size {
-            color: #666;
-            font-size: 14px;
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
         .progress-bar {
             display: none;
             width: 100%;
-            height: 25px;
-            background: #e0e0e0;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            margin-top: 15px;
+            margin-top: 20px;
             overflow: hidden;
         }
 
-        .progress-bar.show {
-            display: block;
-        }
+        .progress-bar.show { display: block; }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: var(--primary-gradient);
             width: 0%;
             transition: width 0.3s;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.8);
         }
 
         .progress-text {
             text-align: center;
-            margin-top: 8px;
-            color: #666;
-            font-size: 14px;
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
         .status-message {
             text-align: center;
             padding: 15px;
-            margin-top: 15px;
-            border-radius: 8px;
+            margin-top: 20px;
+            border-radius: 12px;
             display: none;
+            font-weight: 500;
+            backdrop-filter: blur(5px);
         }
 
-        .status-message.show {
-            display: block;
-        }
+        .status-message.show { display: block; }
 
         .status-message.success {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
         .status-message.error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         .loading {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 25px;
             display: none;
         }
 
-        .loading.show {
-            display: block;
-        }
+        .loading.show { display: block; }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #06b6d4; /* Cyan spinner */
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto 15px;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
         }
 
         @keyframes spin {
@@ -402,4 +432,3 @@
     </script>
 </body>
 </html>
-
